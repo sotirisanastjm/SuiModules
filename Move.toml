@@ -7,6 +7,5 @@ authors = ["Sotiris"]
 nexuschat = "0x0"
 
 [dependencies]
-MoveStdlib = { git = "https://github.com/move-language/move", rev = "devnet" }
 Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "framework/devnet" }
 #sui-framework = { local = "/home/sotiris/.move/sui/crates/sui-framework" }
