@@ -1,93 +1,74 @@
 module nexuschat::user {
-    use sui::object::{UID, ID};
+    use sui::object::{UID};
     use sui::storage::{Table, TableRef};
     use sui::tx_context::TxContext;
 
     struct User has key {
         id: UID,
-        wallet_address: vector<u8>,
-        username: vector<u8>,
-        email: vector<u8>,
-        password: vector<u8>,
-        role: vector<u8>,
+        wallet_address: address,
+        username: string::String,
+        email: string::String,
+        password: string::String, 
+        role: string::String,
         created_at: u64,
-        is_deleted: bool,
     }
 
     struct UserRegistry has key {
-        table: Table<vector<u8>, ID>, 
-        username_table: Table<vector<u8>, ID>, 
-        email_table: Table<vector<u8>, ID>, 
+        table: Table<vector<u8>, UID>,         // Wallet-to-User mapping
+        username_table: Table<vector<u8>, UID>, // Username-to-User mapping
+        email_table: Table<vector<u8>, UID>,    // Email-to-User mapping
     }
 
-    struct UserRegistry has key {
-        table: Table<vector<u8>, ID>, 
-        username_table: Table<vector<u8>, ID>, 
-        email_table: Table<vector<u8>, ID>, 
+    public entry fun init_registry(db_address: address, ctx: &mut TxContext) {
+        move_to(&db_address, UserRegistry {
+            table: table::new<vector<u8>, UID>(ctx),
+            username_table: table::new<vector<u8>, UID>(ctx),
+            email_table: table::new<vector<u8>, UID>(ctx),
+        });
     }
 
-    public fun create_user(
-        registry: &mut UserRegistry,
-        id: UID,
-        wallet_address: vector<u8>,
-        username: vector<u8>,
-        email: vector<u8>,
-        password: vector<u8>,
-        role: vector<u8>,
+    public fun get_registry(db_address: address): &UserRegistry {
+        borrow_global<UserRegistry>(db_address)
+    }
+
+    public fun registry_exists(db_address: address): bool {
+        exists<UserRegistry>(db_address)
+    }
+
+
+
+    public entry fun create_user(
+        wallet_address: address,
+        username: string::String,
+        email: string::String,
+        password: string::String,
+        role: string::String,
         created_at: u64,
+        db: &mut UserRegistry,   // Reference to the UserRegistry
         ctx: &mut TxContext
-    ): User {
-        let user_id_opt = Table::borrow(&registry.table, &wallet_address);
-        if let Some(user_id) = user_id_opt {
-            if exists<User>(*user_id) {
-                let mut user = borrow_global_mut<User>(*user_id);
-                if (user.is_deleted) {
-                    // Reuse the deleted user
-                    user.id = id;
-                    user.username = username;
-                    user.password = password;
-                    user.email = email;
-                    user.role = role;
-                    user.created_at = created_at;
-                    user.is_deleted = false;
-                    return user;
-                }
-            }
-        }
-
-        let user = User {
-            id: UID::new(ctx),
-            wallet_address: wallet_address.clone(),
-            username: username.clone(),
-            email,
-            password,
-            role,
-            created_at,
-            is_deleted: false,
+    ) {
+        // Create a new User object
+        let new_user = User {
+            id: object::new(ctx),
+            wallet_address: wallet_address,
+            username: username,
+            email: email,
+            password: password,
+            role: role,
+            created_at: created_at,
         };
 
-        let user_id = ID::from(&user.id);
-        Table::add(&mut registry.table, wallet_address, user_id);
-        Table::add(&mut registry.username_table, username, user_id);  
-        Table::add(&mut registry.email_table, email, user_id); 
-        user
+        let wallet_key = bcs::to_bytes(&wallet_address);
+        let username_key = bcs::to_bytes(&username);
+        let email_key = bcs::to_bytes(&email);
+
+        // Store the user object inside UserRegistry
+        table::add(&mut db.table, wallet_key, new_user.id);
+        table::add(&mut db.username_table, username_key, new_user.id);
+        table::add(&mut db.email_table, email_key, new_user.id);
     }
 
-    public fun get_user_by_wallet(
-        registry: &UserRegistry,
-        wallet_address: vector<u8>
-    ): Option<User> {
-        let user_id_opt = Table::borrow(&registry.table, &wallet_address);
-        match user_id_opt {
-            Some(user_id) => {
-                if exists<User>(*user_id) {
-                    let user = borrow_global<User>(*user_id);
-                    Some(user)
-                } else {
-                    None
-                }
-            },
-            None => None,
-        }
-    }
+
+    
+
 }
