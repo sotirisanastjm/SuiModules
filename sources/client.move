@@ -7,9 +7,6 @@ module nexuschattest::client {
     struct Client has key, store {
         id: UID,
         wallet_address: address,
-        username: vector<u8>,
-        email: vector<u8>,
-        password: vector<u8>,
         role: vector<u8>,
         created_at: u64,
     }
@@ -46,9 +43,6 @@ module nexuschattest::client {
 
     public entry fun create_user(
         signer_address: address,
-        username: vector<u8>,
-        email: vector<u8>,
-        password: vector<u8>,
         role: vector<u8>,
         created_at: u64,
         ctx: &mut tx_context::TxContext,
@@ -56,9 +50,6 @@ module nexuschattest::client {
         let user = Client {
             id: new(ctx),
             wallet_address: signer_address,
-            username,
-            email,
-            password,
             role,
             created_at,
         };
@@ -76,7 +67,6 @@ module nexuschattest::client {
 
         transfer::public_transfer(chat, signer_address);
 
-
         transfer::public_transfer(notepad, signer_address);
     }
 
@@ -84,9 +74,6 @@ module nexuschattest::client {
         let Client {
             id,
             wallet_address: _,
-            username: _,
-            email: _,
-            password: _,
             role: _,
             created_at: _,
         } = client;
@@ -132,19 +119,38 @@ module nexuschattest::client {
         delete(id);
     }
 
+    // public entry fun add_note(
+    //     folder: &mut Folder,
+    //     id: vector<u8>,
+    //     message: vector<u8>,
+    //     date: u64,
+    //     sender: vector<u8>
+    // ){
+    //     let new_note = Note {
+    //         id: id,
+    //         message: message,
+    //         date: date,
+    //         sender: sender
+    //     };
+    //     vector::push_back(&mut folder.notes, new_note);
+    // }
+
     public entry fun add_note(
-        folder: &mut Folder,
+        notepad: &mut Notepad,
+        folder_index: u64, // index of folder in notepad.folders
         id: vector<u8>,
         message: vector<u8>,
         date: u64,
-        sender: vector<u8>
-    ){
+        sender: vector<u8>,
+    ) {
         let new_note = Note {
-            id: id,
-            message: message,
-            date: date,
-            sender: sender
+            id,
+            message,
+            date,
+            sender,
         };
+
+        let folder = vector::borrow_mut(&mut notepad.folders, folder_index);
         vector::push_back(&mut folder.notes, new_note);
     }
 }
